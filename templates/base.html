@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GAME 42{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('lobby') }}">GAME 42</a>
+        </div>
+        <div class="nav-links">
+            {% if current_user.is_authenticated %}
+                <span class="nav-user">{{ current_user.username }}</span>
+                <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+                <button id="logout-btn" class="btn btn-small">Logout</button>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="container">
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>GAME 42 - Texas 42 Domino Game</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Game - GAME 42{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/game.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="game-container" data-game-id="{{ game_id }}">
+
+    <!-- Score Panel - Top Left -->
+    <div class="score-panel">
+        <div class="score-row">
+            <span class="score-label">Us</span>
+            <span class="score-value team1" id="team1-points">0</span>
+        </div>
+        <div class="score-row">
+            <span class="score-label">Them</span>
+            <span class="score-value team2" id="team2-points">0</span>
+        </div>
+        <div class="marks-display">
+            <span id="team1-marks">0</span>M
+        </div>
+    </div>
+
+    <!-- Trump Display - Top Right -->
+    <div id="trump-display"></div>
+
+    <!-- Hidden status elements for JS -->
+    <div style="display:none;">
+        <span id="game-phase"></span>
+        <span id="current-turn"></span>
+        <span id="trump-info"></span>
+        <span id="team2-marks">0</span>
+    </div>
+
+    <!-- Main Game Board -->
+    <div class="game-board">
+        <!-- North Player -->
+        <div class="player-area north" id="player-north">
+            <div class="player-info">
+                <span class="player-name" id="north-name">Waiting...</span>
+            </div>
+            <div class="player-hand" id="north-hand"></div>
+            <div class="player-bid" id="north-bid"></div>
+        </div>
+
+        <!-- West Player -->
+        <div class="player-area west" id="player-west">
+            <div class="player-info">
+                <span class="player-name" id="west-name">Waiting...</span>
+            </div>
+            <div class="player-hand" id="west-hand"></div>
+            <div class="player-bid" id="west-bid"></div>
+        </div>
+
+        <!-- Center Play Area -->
+        <div class="play-area">
+            <div class="played-dominoes">
+                <div class="played-domino north" id="played-north"></div>
+                <div class="played-domino west" id="played-west"></div>
+                <div class="played-domino south" id="played-south"></div>
+                <div class="played-domino east" id="played-east"></div>
+            </div>
+        </div>
+
+        <!-- East Player -->
+        <div class="player-area east" id="player-east">
+            <div class="player-info">
+                <span class="player-name" id="east-name">Waiting...</span>
+            </div>
+            <div class="player-hand" id="east-hand"></div>
+            <div class="player-bid" id="east-bid"></div>
+        </div>
+
+        <!-- South Player (usually current user's partner view) -->
+        <div class="player-area south" id="player-south">
+            <div class="player-info">
+                <span class="player-name" id="south-name">Waiting...</span>
+            </div>
+            <div class="player-hand" id="south-hand"></div>
+            <div class="player-bid" id="south-bid"></div>
+        </div>
+    </div>
+
+    <!-- My Hand (Bottom) -->
+    <div id="my-hand-container">
+        <h3>Your Hand</h3>
+        <div id="my-hand"></div>
+    </div>
+
+    <!-- Bidding Panel -->
+    <div class="action-panel" id="bidding-panel">
+        <h3>Bidding</h3>
+        <div id="bid-turn-indicator" class="turn-indicator">Waiting...</div>
+        <div class="bid-info">
+            High bid: <strong id="high-bid-display">None</strong>
+        </div>
+        <div class="bid-buttons" id="bid-buttons">
+            <button class="bid-btn" data-bid="30">30</button>
+            <button class="bid-btn" data-bid="31">31</button>
+            <button class="bid-btn" data-bid="32">32</button>
+            <button class="bid-btn" data-bid="33">33</button>
+            <button class="bid-btn" data-bid="34">34</button>
+            <button class="bid-btn" data-bid="35">35</button>
+            <button class="bid-btn" data-bid="36">36</button>
+            <button class="bid-btn" data-bid="37">37</button>
+            <button class="bid-btn" data-bid="38">38</button>
+            <button class="bid-btn" data-bid="39">39</button>
+            <button class="bid-btn" data-bid="40">40</button>
+            <button class="bid-btn" data-bid="41">41</button>
+            <button class="bid-btn" data-bid="42">42</button>
+        </div>
+        <button id="pass-btn">Pass</button>
+    </div>
+
+    <!-- Trump Selection Panel -->
+    <div class="action-panel" id="trump-panel">
+        <h3>Select Trump</h3>
+        <p style="color:#aaa;margin-bottom:15px;">You won with <strong id="winning-bid" style="color:#ffd700;">0</strong>. Choose trump:</p>
+        <div class="trump-buttons">
+            <button class="trump-btn" data-suit="0">Blanks</button>
+            <button class="trump-btn" data-suit="1">Ones</button>
+            <button class="trump-btn" data-suit="2">Twos</button>
+            <button class="trump-btn" data-suit="3">Threes</button>
+            <button class="trump-btn" data-suit="4">Fours</button>
+            <button class="trump-btn" data-suit="5">Fives</button>
+            <button class="trump-btn" data-suit="6">Sixes</button>
+        </div>
+    </div>
+
+    <!-- Waiting Panel -->
+    <div class="action-panel" id="waiting-panel">
+        <h3 id="waiting-message">Waiting for players...</h3>
+        <div class="players-status" id="players-status"></div>
+        <div class="waiting-buttons">
+            <button id="add-bots-btn" style="display: none;">Fill with Bots</button>
+            <button id="start-game-btn" style="display: none;">Start Game</button>
+        </div>
+    </div>
+
+    <!-- Game Over Panel -->
+    <div class="action-panel" id="game-over-panel">
+        <h2 id="winner-message">Game Over!</h2>
+        <div class="final-scores">
+            <p>Team 1: <span id="final-team1">0</span> marks</p>
+            <p>Team 2: <span id="final-team2">0</span> marks</p>
+        </div>
+        <button class="btn btn-primary" onclick="window.location.href='/lobby'">Back to Lobby</button>
+    </div>
+
+    <!-- Chat Panel -->
+    <div id="chat-panel">
+        <div class="chat-header">
+            <h3>Chat</h3>
+            <button id="chat-toggle">−</button>
+        </div>
+        <div class="chat-body">
+            <div id="chat-messages"></div>
+            <div class="chat-input-area">
+                <div class="emoji-picker">
+                    <button class="emoji-btn" data-emoji="👍">👍</button>
+                    <button class="emoji-btn" data-emoji="👎">👎</button>
+                    <button class="emoji-btn" data-emoji="😂">😂</button>
+                    <button class="emoji-btn" data-emoji="🎉">🎉</button>
+                    <button class="emoji-btn" data-emoji="🔥">🔥</button>
+                    <button class="emoji-btn" data-emoji="😎">😎</button>
+                    <button class="emoji-btn" data-emoji="🤔">🤔</button>
+                    <button class="emoji-btn" data-emoji="😭">😭</button>
+                    <button class="emoji-btn" data-emoji="🙏">🙏</button>
+                    <button class="emoji-btn" data-emoji="💪">💪</button>
+                    <button class="emoji-btn" data-emoji="🎲">🎲</button>
+                    <button class="emoji-btn" data-emoji="🏆">🏆</button>
+                </div>
+                <div class="chat-input-row">
+                    <input type="text" id="chat-input" placeholder="Type a message..." maxlength="200" autocomplete="off">
+                    <button id="chat-send">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div class="toast" id="toast"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
+{% endblock %}

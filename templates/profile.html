@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - GAME 42{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.profile-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 2.5rem;
+    color: white;
+}
+
+.profile-username {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.profile-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: var(--secondary);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: white;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.stat-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.profile-actions {
+    margin-top: 2rem;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar" id="profile-avatar">?</div>
+            <div class="profile-username" id="profile-username">Loading...</div>
+            <span class="profile-badge" id="profile-badge"></span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-games">0</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-wins">0</div>
+                <div class="stat-label">Wins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-rate">0%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-marks">0</div>
+                <div class="stat-label">Total Marks</div>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <a href="{{ url_for('lobby') }}" class="btn btn-primary">Back to Lobby</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const res = await fetch('/api/user');
+        const data = await res.json();
+
+        if (data.user) {
+            const user = data.user;
+            document.getElementById('profile-avatar').textContent = user.username[0].toUpperCase();
+            document.getElementById('profile-username').textContent = user.username;
+            document.getElementById('profile-badge').textContent = user.is_guest ? 'Guest' : 'Member';
+            document.getElementById('stat-games').textContent = user.games_played;
+            document.getElementById('stat-wins').textContent = user.games_won;
+            document.getElementById('stat-rate').textContent = user.win_rate + '%';
+            document.getElementById('stat-marks').textContent = user.total_marks;
+        }
+    } catch (err) {
+        console.error('Failed to load profile:', err);
+    }
+});
+</script>
+{% endblock %}

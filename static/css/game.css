@@ -1,0 +1,900 @@
+/* ============================================================================
+   GAME 42 - Green Felt Table Design
+   ============================================================================ */
+
+/* Game Container */
+.game-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 50px);
+    background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 50%, #1a472a 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hide footer on game page */
+.game-container ~ .footer,
+body:has(.game-container) .footer {
+    display: none;
+}
+
+/* Felt texture overlay */
+.game-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+}
+
+/* Score Panel - Left Side */
+.score-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: white;
+    z-index: 10;
+    min-width: 100px;
+}
+
+.score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.score-row:last-child {
+    margin-bottom: 0;
+}
+
+.score-label {
+    color: #aaa;
+    margin-right: 12px;
+}
+
+.score-value {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.score-value.team1 { color: #4a9eff; }
+.score-value.team2 { color: #ff9f4a; }
+
+.marks-display {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    margin-top: 8px;
+}
+
+/* Trump Display - Right Side */
+#trump-display {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(180deg, #c9b896 0%, #a89070 100%);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    z-index: 10;
+    min-width: 80px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.trump-label {
+    font-size: 11px;
+    font-weight: bold;
+    color: #5a4a3a;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.trump-domino {
+    background: #f5f0e6;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 0 auto 8px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.trump-pip {
+    display: grid;
+    grid-template-columns: repeat(3, 8px);
+    grid-template-rows: repeat(3, 8px);
+    gap: 2px;
+}
+
+.trump-pip::before,
+.trump-pip::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #1e3d59;
+    border-radius: 50%;
+}
+
+.trump-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #5a4a3a;
+}
+
+/* Game Board */
+.game-board {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 180px 1fr 180px;
+    grid-template-rows: 100px 1fr 100px;
+    padding: 60px 120px;
+    position: relative;
+}
+
+/* Player Areas */
+.player-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    position: relative;
+}
+
+.player-area.north {
+    grid-column: 2;
+    grid-row: 1;
+    flex-direction: column;
+}
+
+.player-area.south {
+    grid-column: 2;
+    grid-row: 3;
+    flex-direction: column-reverse;
+}
+
+.player-area.west {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: row;
+}
+
+.player-area.east {
+    grid-column: 3;
+    grid-row: 2;
+    flex-direction: row-reverse;
+}
+
+.player-area.current-turn .player-name {
+    color: #ffeb3b;
+    text-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+}
+
+.player-info {
+    margin-bottom: 8px;
+}
+
+.player-name {
+    font-weight: bold;
+    color: white;
+    font-size: 14px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.player-team {
+    display: none;
+}
+
+.player-bid {
+    font-size: 12px;
+    color: #ffd700;
+    margin-top: 4px;
+    min-height: 18px;
+}
+
+.player-bid.has-bid {
+    background: rgba(255, 215, 0, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.player-bid.passed {
+    color: #aaa;
+}
+
+/* Hidden Hands (Other Players) */
+.player-hand {
+    display: flex;
+    gap: 2px;
+}
+
+.player-area.west .player-hand,
+.player-area.east .player-hand {
+    flex-direction: column;
+}
+
+/* Domino Back (face down) */
+.domino-back {
+    width: 50px;
+    height: 28px;
+    background: linear-gradient(135deg, #d4c4a8 0%, #c4b498 50%, #b4a488 100%);
+    border-radius: 4px;
+    border: 1px solid #a09080;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.domino-back::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        rgba(139, 119, 101, 0.3) 2px,
+        rgba(139, 119, 101, 0.3) 4px
+    );
+    border-radius: 2px;
+}
+
+.player-area.west .domino-back,
+.player-area.east .domino-back {
+    width: 28px;
+    height: 50px;
+}
+
+/* Play Area (Center) */
+.play-area {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.played-dominoes {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 60px);
+    gap: 10px;
+    place-items: center;
+}
+
+.played-domino {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.played-domino.north { grid-column: 2; grid-row: 1; }
+.played-domino.west { grid-column: 1; grid-row: 2; }
+.played-domino.south { grid-column: 2; grid-row: 3; }
+.played-domino.east { grid-column: 3; grid-row: 2; }
+
+/* My Hand (Bottom) */
+#my-hand-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%);
+    padding: 15px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#my-hand-container h3 {
+    display: none;
+}
+
+#my-hand {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.hand-placeholder {
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+}
+
+/* ============================================================================
+   DOMINO STYLING - Realistic ivory look
+   ============================================================================ */
+
+.domino {
+    display: flex;
+    flex-direction: row;
+    width: 90px;
+    height: 45px;
+    background: linear-gradient(180deg, #fffef5 0%, #f5efe5 50%, #ebe5db 100%);
+    border-radius: 6px;
+    border: 2px solid #d0c8b8;
+    box-shadow:
+        2px 2px 4px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.domino::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.domino:hover:not(.disabled) {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow:
+        4px 8px 12px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.domino.playable {
+    box-shadow:
+        0 0 0 3px rgba(76, 175, 80, 0.6),
+        2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.domino.playable:hover {
+    box-shadow:
+        0 0 0 3px rgba(76, 175, 80, 0.8),
+        4px 8px 12px rgba(0,0,0,0.4);
+}
+
+.domino.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.domino.small {
+    width: 60px;
+    height: 30px;
+}
+
+/* Domino Halves */
+.domino-half {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 4px;
+    position: relative;
+}
+
+.domino-divider {
+    width: 2px;
+    background: linear-gradient(180deg, #c0b8a8 0%, #a09888 50%, #c0b8a8 100%);
+}
+
+/* Pips */
+.pip {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pip.visible::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: radial-gradient(circle at 30% 30%, #2a4a6a, #1a3a5a 50%, #0a2a4a);
+    border-radius: 50%;
+    box-shadow:
+        inset 1px 1px 2px rgba(255,255,255,0.3),
+        0 1px 2px rgba(0,0,0,0.3);
+}
+
+.domino.small .pip.visible::before {
+    width: 5px;
+    height: 5px;
+}
+
+/* ============================================================================
+   ACTION PANELS - Bidding, Trump Selection, etc.
+   ============================================================================ */
+
+.action-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 12px;
+    padding: 20px 30px;
+    z-index: 100;
+    text-align: center;
+    min-width: 320px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.action-panel h3 {
+    color: white;
+    margin: 0 0 15px;
+    font-size: 18px;
+}
+
+/* Turn Indicator */
+.turn-indicator {
+    color: #aaa;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.turn-indicator.my-turn {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+/* Bid Info */
+.bid-info {
+    color: #ccc;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.bid-info strong {
+    color: #ffd700;
+}
+
+/* Bid Buttons Grid */
+.bid-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.bid-btn {
+    padding: 12px 8px;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #5a6a5a 0%, #4a5a4a 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 55px;
+}
+
+.bid-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #6a7a6a 0%, #5a6a5a 100%);
+    transform: translateY(-2px);
+}
+
+.bid-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.bid-btn.available {
+    background: linear-gradient(180deg, #4a7a4a 0%, #3a6a3a 100%);
+    box-shadow: 0 0 10px rgba(74, 175, 80, 0.3);
+}
+
+.bid-btn.available:hover {
+    background: linear-gradient(180deg, #5a8a5a 0%, #4a7a4a 100%);
+}
+
+/* Pass Button */
+#pass-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #8a5a5a 0%, #7a4a4a 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#pass-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #9a6a6a 0%, #8a5a5a 100%);
+}
+
+#pass-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+#pass-btn.available {
+    box-shadow: 0 0 10px rgba(175, 80, 80, 0.3);
+}
+
+/* Trump Buttons */
+.trump-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.trump-btn {
+    padding: 15px 10px;
+    font-size: 14px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #5a6a7a 0%, #4a5a6a 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.trump-btn:hover {
+    background: linear-gradient(180deg, #6a7a8a 0%, #5a6a7a 100%);
+    transform: translateY(-2px);
+}
+
+/* Waiting Panel */
+#waiting-panel {
+    min-width: 280px;
+}
+
+.players-status {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 15px 0;
+    width: 100%;
+}
+
+.player-slot {
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: left;
+}
+
+.player-slot.filled {
+    background: rgba(76, 175, 80, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    color: #8f8;
+}
+
+.player-slot.empty {
+    background: rgba(100, 100, 100, 0.2);
+    border: 1px solid rgba(100, 100, 100, 0.4);
+    color: #888;
+}
+
+#start-game-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #4a7a4a 0%, #3a6a3a 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#start-game-btn:hover {
+    background: linear-gradient(180deg, #5a8a5a 0%, #4a7a4a 100%);
+}
+
+.waiting-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+}
+
+#add-bots-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #6a5a3a 0%, #5a4a2a 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+}
+
+#add-bots-btn:hover {
+    background: linear-gradient(180deg, #7a6a4a 0%, #6a5a3a 100%);
+}
+
+/* Game Over Panel */
+#game-over-panel {
+    padding: 30px 40px;
+}
+
+#game-over-panel h2 {
+    color: #ffd700;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+.final-scores {
+    color: white;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+/* ============================================================================
+   CHAT PANEL
+   ============================================================================ */
+
+#chat-panel {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 50;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: height 0.3s ease;
+}
+
+#chat-panel.minimized {
+    height: 40px;
+}
+
+#chat-panel.minimized .chat-body {
+    display: none;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: rgba(255,255,255,0.1);
+    cursor: pointer;
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 14px;
+    color: white;
+}
+
+#chat-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-body {
+    display: flex;
+    flex-direction: column;
+}
+
+#chat-messages {
+    height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    font-size: 13px;
+}
+
+.chat-message {
+    margin-bottom: 6px;
+    word-wrap: break-word;
+}
+
+.chat-username {
+    font-weight: bold;
+    color: #4a9eff;
+}
+
+.chat-username.spectator {
+    color: #888;
+}
+
+.chat-text {
+    color: #ddd;
+}
+
+.chat-input-area {
+    padding: 8px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.emoji-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.emoji-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+#chat-input {
+    flex: 1;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
+    color: white;
+    font-size: 13px;
+}
+
+#chat-input::placeholder {
+    color: rgba(255,255,255,0.5);
+}
+
+#chat-send {
+    padding: 8px 15px;
+    background: #4a7a4a;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#chat-send:hover {
+    background: #5a8a5a;
+}
+
+/* ============================================================================
+   TOAST NOTIFICATIONS
+   ============================================================================ */
+
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.toast.error {
+    background: rgba(200, 50, 50, 0.9);
+}
+
+.toast.success {
+    background: rgba(50, 150, 50, 0.9);
+}
+
+/* ============================================================================
+   STATUS BAR (hidden - info moved to panels)
+   ============================================================================ */
+
+.game-status-bar {
+    display: none;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    .game-board {
+        padding: 50px 60px;
+        grid-template-columns: 120px 1fr 120px;
+    }
+
+    .domino {
+        width: 70px;
+        height: 35px;
+    }
+
+    .pip.visible::before {
+        width: 6px;
+        height: 6px;
+    }
+
+    #chat-panel {
+        width: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .game-board {
+        padding: 40px 20px;
+        grid-template-columns: 80px 1fr 80px;
+    }
+
+    .player-area.west,
+    .player-area.east {
+        display: none;
+    }
+
+    .domino {
+        width: 60px;
+        height: 30px;
+    }
+
+    .domino-back {
+        width: 40px;
+        height: 22px;
+    }
+
+    #chat-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
+    }
+
+    .action-panel {
+        min-width: 280px;
+        padding: 15px 20px;
+    }
+
+    .bid-buttons {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

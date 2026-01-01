@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - GAME 42{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <h1>GAME 42</h1>
+            <p>Texas 42 Domino Game</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="tab-btn active" data-tab="signin">Sign In</button>
+            <button class="tab-btn" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="signin-form" class="auth-form active">
+            <div class="form-group">
+                <label for="signin-username">Username</label>
+                <input type="text" id="signin-username" name="username" required
+                       minlength="3" maxlength="20" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" name="password" required
+                       minlength="6" autocomplete="current-password">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me</label>
+            </div>
+            <div class="form-error" id="signin-error"></div>
+            <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signup-form" class="auth-form">
+            <div class="form-group">
+                <label for="signup-username">Username</label>
+                <input type="text" id="signup-username" name="username" required
+                       minlength="3" maxlength="20" autocomplete="username"
+                       pattern="[A-Za-z0-9_]+" title="Letters, numbers, and underscores only">
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" name="password" required
+                       minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="signup-confirm">Confirm Password</label>
+                <input type="password" id="signup-confirm" name="confirm" required
+                       minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-error" id="signup-error"></div>
+            <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+
+        <div class="auth-divider">
+            <span>or</span>
+        </div>
+
+        <button id="guest-btn" class="btn btn-secondary btn-full">Play as Guest</button>
+
+        <p class="auth-note">
+            Guest accounts are temporary and won't save your statistics.
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab-btn');
+    const forms = document.querySelectorAll('.auth-form');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+
+            tabs.forEach(t => t.classList.remove('active'));
+            forms.forEach(f => f.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(`${tabName}-form`).classList.add('active');
+        });
+    });
+
+    // Sign In
+    document.getElementById('signin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorEl = document.getElementById('signin-error');
+        errorEl.textContent = '';
+
+        const username = document.getElementById('signin-username').value;
+        const password = document.getElementById('signin-password').value;
+        const remember = document.getElementById('remember').checked;
+
+        try {
+            const res = await fetch('/api/signin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, remember })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                window.location.href = '/lobby';
+            } else {
+                errorEl.textContent = data.error || 'Sign in failed';
+            }
+        } catch (err) {
+            errorEl.textContent = 'Connection error. Please try again.';
+        }
+    });
+
+    // Sign Up
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorEl = document.getElementById('signup-error');
+        errorEl.textContent = '';
+
+        const username = document.getElementById('signup-username').value;
+        const password = document.getElementById('signup-password').value;
+        const confirm = document.getElementById('signup-confirm').value;
+
+        if (password !== confirm) {
+            errorEl.textContent = 'Passwords do not match';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                window.location.href = '/lobby';
+            } else {
+                errorEl.textContent = data.error || 'Sign up failed';
+            }
+        } catch (err) {
+            errorEl.textContent = 'Connection error. Please try again.';
+        }
+    });
+
+    // Guest Login
+    document.getElementById('guest-btn').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/guest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                window.location.href = '/lobby';
+            } else {
+                alert(data.error || 'Could not create guest account');
+            }
+        } catch (err) {
+            alert('Connection error. Please try again.');
+        }
+    });
+});
+</script>
+{% endblock %}
