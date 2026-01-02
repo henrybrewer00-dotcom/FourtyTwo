@@ -10,6 +10,7 @@ import random
 import string
 from datetime import datetime, timedelta
 from functools import wraps
+import threading
 
 from flask import (
     Flask, render_template, request, jsonify, session, redirect, url_for
@@ -38,6 +39,71 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # In-memory game storage (active games)
 active_games = {}  # game_id -> Game object
+
+
+# ============================================================================
+# Game Cleanup Functions
+# ============================================================================
+
+def cleanup_old_games():
+    """
+    Cleanup task that runs periodically to:
+    1. Remove games inactive for 2+ hours from active_games
+    2. Delete games older than 1 week from database
+    """
+    with app.app_context():
+        now = datetime.utcnow()
+
+        # Remove games inactive for 2+ hours from being joinable
+        two_hours_ago = now - timedelta(hours=2)
+        inactive_games = GameSession.query.filter(
+            GameSession.last_activity < two_hours_ago,
+            GameSession.status != 'finished'
+        ).all()
+
+        for game in inactive_games:
+            # Mark as finished so they can't be joined
+            game.status = 'finished'
+            # Remove from active memory
+            if game.game_id in active_games:
+                del active_games[game.game_id]
+
+        # Delete games older than 1 week
+        one_week_ago = now - timedelta(weeks=1)
+        old_games = GameSession.query.filter(
+            GameSession.created_at < one_week_ago
+        ).all()
+
+        for game in old_games:
+            db.session.delete(game)
+            if game.game_id in active_games:
+                del active_games[game.game_id]
+
+        db.session.commit()
+        print(f"Cleanup: Marked {len(inactive_games)} inactive games, deleted {len(old_games)} old games")
+
+
+def start_cleanup_thread():
+    """Start a background thread that runs cleanup every hour."""
+    def run_cleanup():
+        while True:
+            import time
+            time.sleep(3600)  # Run every hour
+            try:
+                cleanup_old_games()
+            except Exception as e:
+                print(f"Error in cleanup: {e}")
+
+    thread = threading.Thread(target=run_cleanup, daemon=True)
+    thread.start()
+
+
+def update_game_activity(game_id):
+    """Update the last_activity timestamp for a game."""
+    game_session = GameSession.query.filter_by(game_id=game_id).first()
+    if game_session:
+        game_session.last_activity = datetime.utcnow()
+        db.session.commit()
 
 
 # ============================================================================
@@ -445,12 +511,16 @@ def create_game():
 
     game_id = str(uuid.uuid4())[:8]
 
+    # Generate access code for private games
+    access_code = None if is_public else GameSession.generate_access_code()
+
     # Create game session in database
     game_session = GameSession(
         game_id=game_id,
         name=name[:50],
         host_id=current_user.id,
-        is_public=is_public
+        is_public=is_public,
+        access_code=access_code
     )
     db.session.add(game_session)
     db.session.commit()
@@ -459,7 +529,12 @@ def create_game():
     game = Game(game_id)
     active_games[game_id] = game
 
-    return jsonify({'success': True, 'game_id': game_id})
+    return jsonify({
+        'success': True,
+        'game_id': game_id,
+        'access_code': access_code,
+        'is_public': is_public
+    })
 
 
 # ============================================================================
@@ -515,6 +590,21 @@ def get_game(game_id):
     return jsonify(state)
 
 
+@app.route('/api/games/join/<access_code>', methods=['POST'])
+@login_required
+def join_game_by_code(access_code):
+    """Join a private game using access code."""
+    game_session = GameSession.query.filter_by(access_code=access_code.upper()).first()
+
+    if not game_session:
+        return jsonify({'error': 'Invalid access code'}), 404
+
+    return jsonify({
+        'success': True,
+        'game_id': game_session.game_id
+    })
+
+
 # ============================================================================
 # Profile Routes
 # ============================================================================
@@ -551,6 +641,9 @@ def handle_join_game(data):
             return
         game = Game(game_id)
         active_games[game_id] = game
+
+    # Update activity
+    update_game_activity(game_id)
 
     join_room(game_id)
 
@@ -680,6 +773,9 @@ def handle_bid(data):
     game_id = data.get('game_id')
     bid = data.get('bid', 0)
 
+    # Update activity
+    update_game_activity(game_id)
+
     game = active_games.get(game_id)
     if not game:
         emit('error', {'message': 'Game not found'})
@@ -776,6 +872,9 @@ def handle_play(data):
     """Handle playing a domino."""
     game_id = data.get('game_id')
     domino_id = data.get('domino_id')
+
+    # Update activity
+    update_game_activity(game_id)
 
     game = active_games.get(game_id)
     if not game:
@@ -900,6 +999,9 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
+    # Start cleanup thread
+    start_cleanup_thread()
+
     # Get local IP for network access info
     import socket
     hostname = socket.gethostname()
@@ -915,6 +1017,7 @@ if __name__ == '__main__':
     print(f"\nLocal access:   http://localhost:5001")
     print(f"Network access: http://{local_ip}:5001")
     print("\nShare the network address with players on your WiFi!")
+    print("Cleanup thread started (runs every hour)")
     print("=" * 50 + "\n")
 
     socketio.run(app, host='0.0.0.0', port=5001, debug=True)

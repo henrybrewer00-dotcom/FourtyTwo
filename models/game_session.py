@@ -1,6 +1,8 @@
 from models import db
 from datetime import datetime
 import json
+import random
+import string
 
 
 class GameSession(db.Model):
@@ -14,6 +16,8 @@ class GameSession(db.Model):
     # Game status: 'waiting', 'bidding', 'playing', 'finished'
     status = db.Column(db.String(20), default='waiting')
     is_public = db.Column(db.Boolean, default=True)
+    access_code = db.Column(db.String(6), nullable=True)  # For private games
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Players stored as JSON: {"north": user_id, "south": user_id, "east": user_id, "west": user_id}
     players_json = db.Column(db.Text, default='{}')
@@ -64,6 +68,11 @@ class GameSession(db.Model):
         players = self.players
         return sum(1 for pos in ['north', 'south', 'east', 'west'] if players.get(pos))
 
+    @staticmethod
+    def generate_access_code():
+        """Generate a 6-character access code."""
+        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
     def to_dict(self):
         """Convert game session to dictionary for JSON serialization."""
         return {
@@ -73,6 +82,7 @@ class GameSession(db.Model):
             'host_id': self.host_id,
             'status': self.status,
             'is_public': self.is_public,
+            'access_code': self.access_code,
             'players': self.players,
             'spectators': self.spectators,
             'player_count': self.player_count,
@@ -80,5 +90,6 @@ class GameSession(db.Model):
             'team2_marks': self.team2_marks,
             'team1_points': self.team1_points,
             'team2_points': self.team2_points,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_activity': self.last_activity.isoformat() if self.last_activity else None
         }

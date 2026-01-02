@@ -4,7 +4,15 @@
       "Bash(pip3 install:*)",
       "Bash(python3:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Texas 42 Domino Game with AI Bots\n\nComplete multiplayer Texas 42 domino game with free local AI bots.\n\nFeatures:\n- User authentication (signup, signin, guest mode)\n- Real-time multiplayer with WebSocket\n- Full Texas 42 rules implementation\n- AI bot players with intelligent bidding and play\n- Game lobby and spectator mode\n- Local network play support\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(lsof -i :5001)",
+      "Bash(pkill:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nImprove AI bot intelligence for smarter gameplay\n\nEnhanced AI bidding and playing strategies:\n\nBidding improvements:\n- Calculate hand strength for all 7 suits\n- Consider doubles (worth 8 points each)\n- Factor in count dominoes (5-0, 4-1, 3-2, 6-4, 5-5)\n- Smart bid thresholds based on hand strength\n- More conservative passing when hand is weak\n\nPlaying improvements:\n- Lead with trump doubles or count dominoes when possible\n- Try to win tricks by playing lowest winning card\n- Dump low non-count dominoes when can''t win\n- Protect valuable count dominoes\n- Better trump suit evaluation\n\nAI bots now play competitively and make strategic decisions!\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []
