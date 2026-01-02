@@ -105,23 +105,44 @@ def handle_ai_turn(game_id):
     socketio.sleep(1)
 
     if game.phase == 'bidding':
-        # AI bidding logic
+        # AI bidding logic - Smarter strategy
         high_bid = game.high_bid or 29
         hand = player.hand
 
-        # Calculate hand strength
-        suit_counts = {}
-        for domino in hand:
-            for suit in [domino.high, domino.low]:
-                suit_counts[suit] = suit_counts.get(suit, 0) + 1
+        # Calculate hand strength for each suit
+        suit_strengths = {}
+        for suit in range(7):  # 0-6
+            strength = 0
+            suit_dominoes = []
+            for domino in hand:
+                if domino.belongs_to_suit(suit):
+                    suit_dominoes.append(domino)
+                    # Doubles are very strong in trump
+                    if domino.is_double and domino.high == suit:
+                        strength += 8
+                    else:
+                        strength += 3
+                    # Count dominoes are valuable
+                    if domino.count_value > 0:
+                        strength += domino.count_value // 5
+            suit_strengths[suit] = strength
 
-        best_suit = max(suit_counts, key=suit_counts.get) if suit_counts else 0
-        strength = suit_counts.get(best_suit, 0)
+        # Find best suit
+        best_suit = max(suit_strengths, key=suit_strengths.get) if suit_strengths else 0
+        max_strength = suit_strengths[best_suit]
 
-        # Decide to bid or pass
-        if strength >= 4 and high_bid < 35:
-            bid = min(high_bid + 1, 35)
-        elif strength >= 3 and high_bid < 32:
+        # Count total count dominoes (5-0, 4-1, 3-2, 6-4, 5-5)
+        count_dominoes = sum(1 for d in hand if d.count_value > 0)
+
+        # Smarter bidding logic
+        bid = 0
+        if max_strength >= 18:  # Very strong hand
+            bid = min(42, max(high_bid + 1, 35))
+        elif max_strength >= 14 and high_bid < 37:  # Strong hand
+            bid = high_bid + 1
+        elif max_strength >= 10 and high_bid < 33:  # Decent hand
+            bid = high_bid + 1
+        elif max_strength >= 7 and high_bid < 31 and count_dominoes >= 2:  # Okay hand with counts
             bid = high_bid + 1
         else:
             bid = 0  # Pass
@@ -170,7 +191,7 @@ def handle_ai_turn(game_id):
                 handle_ai_turn(game_id)
 
     elif game.phase == 'playing':
-        # AI play logic
+        # AI play logic - Smarter strategy
         hand = player.hand
         lead_suit = game.lead_suit
         trump_suit = game.trump_suit
@@ -179,12 +200,63 @@ def handle_ai_turn(game_id):
         playable = player.get_playable_dominoes(lead_suit, trump_suit)
 
         if playable:
-            # Simple strategy: play highest if leading, follow suit otherwise
+            chosen = None
+
             if not game.current_trick:
-                # Leading - play a strong domino
-                chosen = max(playable, key=lambda d: d.pip_total)
+                # Leading the trick - smart strategy
+                # Priority: Lead with trump double, or lead with count domino, or lead strongest
+                trump_doubles = [d for d in playable if d.is_double and d.belongs_to_suit(trump_suit)]
+                count_dominoes = [d for d in playable if d.count_value > 0]
+
+                if trump_doubles:
+                    chosen = max(trump_doubles, key=lambda d: d.pip_total)
+                elif count_dominoes:
+                    chosen = max(count_dominoes, key=lambda d: d.count_value)
+                else:
+                    # Lead with highest domino
+                    chosen = max(playable, key=lambda d: d.pip_total)
             else:
-                # Following - try to win or dump low
+                # Following - try to win the trick or dump low
+                current_winning = None
+                current_high_value = -1
+
+                # Find current winning domino in trick
+                for pos, domino in game.current_trick:
+                    domino_value = 0
+                    if domino.belongs_to_suit(trump_suit):
+                        domino_value = 100 + domino.pip_total  # Trump is strong
+                    elif lead_suit is not None and domino.belongs_to_suit(lead_suit):
+                        domino_value = domino.pip_total
+
+                    if domino_value > current_high_value:
+                        current_high_value = domino_value
+                        current_winning = domino
+
+                # Try to beat the current winning domino
+                can_win = []
+                for d in playable:
+                    d_value = 0
+                    if d.belongs_to_suit(trump_suit):
+                        d_value = 100 + d.pip_total
+                    elif lead_suit is not None and d.belongs_to_suit(lead_suit):
+                        d_value = d.pip_total
+
+                    if d_value > current_high_value:
+                        can_win.append((d, d_value))
+
+                if can_win:
+                    # Can win - play the lowest winning domino (save high cards)
+                    chosen = min(can_win, key=lambda x: x[1])[0]
+                else:
+                    # Can't win - dump lowest non-count domino
+                    non_count = [d for d in playable if d.count_value == 0]
+                    if non_count:
+                        chosen = min(non_count, key=lambda d: d.pip_total)
+                    else:
+                        # Have to give up a count domino
+                        chosen = min(playable, key=lambda d: d.count_value)
+
+            if not chosen:
                 chosen = playable[0]
 
             success, message, trick_result = game.play_domino(current_pos, chosen.id)
