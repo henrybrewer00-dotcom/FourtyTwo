@@ -756,14 +756,33 @@ def handle_start_game(data):
 
     save_game_state(game)
 
-    # Send state to each player
-    for pos, player in game.players.items():
-        state = game.get_state_for_player(pos)
-        state['my_position'] = pos
-        emit('game_started', state, room=game_id)
+    # Send state to each player individually with their cards
+    from flask_socketio import join_room
+
+    # First, broadcast to all that game started
+    emit('game_started', {
+        'phase': game.phase,
+        'current_turn': game.current_turn,
+        'message': 'Game started! Cards dealt.'
+    }, room=game_id)
+
+    # Then send each player their personal state with their hand
+    socketio.emit('game_state', {
+        'phase': game.phase,
+        'players': {pos: p.to_dict(hide_hand=False) for pos, p in game.players.items()},
+        'my_position': None,
+        'current_turn': game.current_turn,
+        'high_bid': game.high_bid,
+        'high_bidder': game.high_bidder,
+        'team1_marks': game.team1_marks,
+        'team2_marks': game.team2_marks,
+        'team1_hand_points': game.team1_hand_points,
+        'team2_hand_points': game.team2_hand_points
+    }, room=game_id)
 
     # If it's an AI's turn, make them act
     if game.phase == 'bidding':
+        socketio.sleep(0.5)  # Small delay so UI can update
         handle_ai_turn(game_id)
 
 
@@ -1014,10 +1033,10 @@ if __name__ == '__main__':
     print("GAME 42 - Texas 42 Domino Game")
     print("=" * 50)
     print(f"\nServer starting...")
-    print(f"\nLocal access:   http://localhost:5001")
-    print(f"Network access: http://{local_ip}:5001")
+    print(f"\nLocal access:   http://localhost:8080")
+    print(f"Network access: http://{local_ip}:8080")
     print("\nShare the network address with players on your WiFi!")
     print("Cleanup thread started (runs every hour)")
     print("=" * 50 + "\n")
 
-    socketio.run(app, host='0.0.0.0', port=5001, debug=True)
+    socketio.run(app, host='0.0.0.0', port=8080, debug=True)
