@@ -115,19 +115,24 @@
 
         socket.on('player_joined', (data) => {
             showToast(`${data.username} joined as ${positionNames[data.position]}`);
-            // Refresh game state
-            socket.emit('join_game', { game_id: gameId });
+            if (data.players) {
+                gameState.players = data.players;
+                gameState.phase = data.phase;
+                updateUI();
+            }
         });
 
         socket.on('player_left', (data) => {
             showToast(`${data.username} left the game`);
-            socket.emit('join_game', { game_id: gameId });
         });
 
         socket.on('bots_added', (data) => {
             showToast(data.message);
-            // Refresh game state
-            socket.emit('join_game', { game_id: gameId });
+            if (data.players) {
+                gameState.players = data.players;
+                gameState.phase = data.phase;
+                updateUI();
+            }
         });
 
         socket.on('spectator_joined', (data) => {
@@ -147,7 +152,7 @@
             gameState.high_bid = data.high_bid;
             gameState.high_bidder = data.high_bidder;
             gameState.phase = data.phase;
-            gameState.current_turn = data.current_bidder;
+            gameState.current_turn = data.current_turn;
 
             const playerName = gameState.players?.[data.position]?.username || data.position;
             if (data.bid > 0) {
@@ -172,8 +177,9 @@
             console.log('Trump selected:', data);
             gameState.trump_suit = data.trump_suit;
             gameState.phase = data.phase;
-            gameState.current_turn = data.current_leader;
-            showToast(`Trump is ${suitNames[data.trump_suit]}! ${gameState.players[data.current_leader]?.username} leads.`);
+            gameState.current_turn = data.current_turn;
+            const leaderName = gameState.players[data.current_turn]?.username || 'Unknown';
+            showToast(`Trump is ${suitNames[data.trump_suit]}! ${leaderName} leads.`);
             updateUI();
         });
 
@@ -184,6 +190,7 @@
             gameState.current_trick = data.current_trick;
             gameState.lead_suit = data.lead_suit;
             gameState.phase = data.phase;
+            gameState.current_turn = data.current_turn;
 
             // Show the played domino
             renderPlayedDomino(data.position, data.domino_id);
@@ -198,10 +205,10 @@
                 const winner = gameState.players[data.trick_result.winner];
                 showToast(`${winner?.username} wins the trick! (${data.trick_result.points} pts)`);
 
-                // Clear trick after delay
+                // Clear trick after delay and update UI
                 setTimeout(() => {
                     clearPlayedDominoes();
-                    socket.emit('join_game', { game_id: gameId });
+                    updateUI();
                 }, 1500);
 
                 if (data.game_over) {
@@ -210,8 +217,8 @@
                     showGameOver(data.winner);
                 }
             } else {
-                // Refresh state to get next player's turn
-                socket.emit('join_game', { game_id: gameId });
+                // Update UI immediately for next player
+                updateUI();
             }
 
             updateScores();

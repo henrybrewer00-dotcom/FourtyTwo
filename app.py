@@ -221,7 +221,7 @@ def handle_ai_turn(game_id):
                 'bid': bid,
                 'high_bid': game.high_bid,
                 'high_bidder': game.high_bidder,
-                'current_bidder': game.current_bidder if game.phase == 'bidding' else None,
+                'current_turn': game.current_turn,
                 'phase': game.phase,
                 'message': message
             }, room=game_id)
@@ -247,7 +247,7 @@ def handle_ai_turn(game_id):
             save_game_state(game)
             socketio.emit('trump_selected', {
                 'trump_suit': game.trump_suit,
-                'current_leader': game.current_leader,
+                'current_turn': game.current_turn,
                 'phase': game.phase,
                 'message': message
             }, room=game_id)
@@ -334,7 +334,8 @@ def handle_ai_turn(game_id):
                     'domino_id': chosen.id,
                     'current_trick': [(p, d.to_dict()) for p, d in game.current_trick],
                     'lead_suit': game.lead_suit,
-                    'phase': game.phase
+                    'phase': game.phase,
+                    'current_turn': game.current_turn
                 }
 
                 if trick_result:
@@ -670,10 +671,13 @@ def handle_join_game(data):
         if success:
             save_game_state(game)
             emit('game_state', game.get_state_for_player(result))
+            # Broadcast player info update to all in room
             emit('player_joined', {
                 'position': result,
-                'username': current_user.username
-            }, room=game_id)
+                'username': current_user.username,
+                'players': {pos: p.to_dict(hide_hand=True) for pos, p in game.players.items()},
+                'phase': game.phase
+            }, room=game_id, include_self=False)
             return
 
     # Join as spectator
@@ -730,7 +734,11 @@ def handle_add_bots(data):
             bot_num += 1
 
     save_game_state(game)
-    emit('bots_added', {'message': f'Added {bot_num} bot(s)'}, room=game_id)
+    emit('bots_added', {
+        'message': f'Added {bot_num} bot(s)',
+        'players': {pos: p.to_dict(hide_hand=True) for pos, p in game.players.items()},
+        'phase': game.phase
+    }, room=game_id)
 
 
 @socketio.on('start_game')
@@ -825,7 +833,7 @@ def handle_bid(data):
         'bid': bid,
         'high_bid': game.high_bid,
         'high_bidder': game.high_bidder,
-        'current_bidder': game.current_bidder,
+        'current_turn': game.current_turn,
         'phase': game.phase,
         'message': message
     }, room=game_id)
@@ -874,7 +882,7 @@ def handle_trump(data):
     # Broadcast trump selection
     emit('trump_selected', {
         'trump_suit': game.trump_suit,
-        'current_leader': game.current_leader,
+        'current_turn': game.current_turn,
         'phase': game.phase,
         'message': message
     }, room=game_id)
@@ -925,7 +933,8 @@ def handle_play(data):
         'domino_id': domino_id,
         'current_trick': [(p, d.to_dict()) for p, d in game.current_trick],
         'lead_suit': game.lead_suit,
-        'phase': game.phase
+        'phase': game.phase,
+        'current_turn': game.current_turn
     }
 
     if trick_result:
