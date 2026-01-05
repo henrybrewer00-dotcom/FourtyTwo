@@ -48,13 +48,26 @@ active_games = {}  # game_id -> Game object
 def cleanup_old_games():
     """
     Cleanup task that runs periodically to:
-    1. Remove games inactive for 2+ hours from active_games
-    2. Delete games older than 1 week from database
+    1. Delete finished games older than 30 minutes
+    2. Delete inactive games (2+ hours no activity)
+    3. Remove from memory
     """
     with app.app_context():
         now = datetime.utcnow()
 
-        # Remove games inactive for 2+ hours from being joinable
+        # Delete finished games after 30 minutes
+        thirty_min_ago = now - timedelta(minutes=30)
+        finished_games = GameSession.query.filter(
+            GameSession.status == 'finished',
+            GameSession.last_activity < thirty_min_ago
+        ).all()
+
+        for game in finished_games:
+            db.session.delete(game)
+            if game.game_id in active_games:
+                del active_games[game.game_id]
+
+        # Delete games inactive for 2+ hours (abandoned games)
         two_hours_ago = now - timedelta(hours=2)
         inactive_games = GameSession.query.filter(
             GameSession.last_activity < two_hours_ago,
@@ -62,25 +75,12 @@ def cleanup_old_games():
         ).all()
 
         for game in inactive_games:
-            # Mark as finished so they can't be joined
-            game.status = 'finished'
-            # Remove from active memory
-            if game.game_id in active_games:
-                del active_games[game.game_id]
-
-        # Delete games older than 1 week
-        one_week_ago = now - timedelta(weeks=1)
-        old_games = GameSession.query.filter(
-            GameSession.created_at < one_week_ago
-        ).all()
-
-        for game in old_games:
             db.session.delete(game)
             if game.game_id in active_games:
                 del active_games[game.game_id]
 
         db.session.commit()
-        print(f"Cleanup: Marked {len(inactive_games)} inactive games, deleted {len(old_games)} old games")
+        print(f"Cleanup: Deleted {len(finished_games)} finished games, {len(inactive_games)} inactive games")
 
 
 def start_cleanup_thread():
